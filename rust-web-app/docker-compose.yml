@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  rust-web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rust-web-app
+    ports:
+      - "8080:8080"        # host:container
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - RUST_LOG=info      # change to "debug" for verbose logs
+    restart: unless-stopped
