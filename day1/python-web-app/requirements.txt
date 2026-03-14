@@ -1,0 +1,3 @@
+# ไม่มี external dependency
+# ใช้ Python Standard Library ทั้งหมด:
+#   http.server, json, threading, os, time, re
