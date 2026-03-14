@@ -1,0 +1,19 @@
+services:
+  bash-web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bash-web-app
+    ports:
+      - "8082:8080"    # ใช้ 8082 เพราะ Rust=8080, Go=8081
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: rust-web-app_default
+    external: true
