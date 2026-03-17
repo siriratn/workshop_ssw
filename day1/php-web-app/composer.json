@@ -1,0 +1,13 @@
+{
+  "name": "php-web-app",
+  "description": "Event-Driven Web Application in PHP (stdlib only)",
+  "type": "project",
+  "require": {
+    "php": ">=8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}

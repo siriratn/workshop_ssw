@@ -1,0 +1,19 @@
+services:
+  js-web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: js-web-app
+    ports:
+      - "8086:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: rust-web-app_default
+    external: true

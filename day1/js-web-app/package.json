@@ -1,0 +1,10 @@
+{
+  "name": "js-web-app",
+  "version": "1.0.0",
+  "description": "Event-Driven Web Application in JavaScript (stdlib only)",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,17 @@
+name: dart_web_app
+description: Event-Driven Web Application in Dart (stdlib only)
+version: 1.0.0
+
+# pubspec.yaml คือ Dependency File ของ Dart
+# Package Manager คือ pub (dart pub get)
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+# ใช้ stdlib เท่านั้น — ไม่มี external dependencies
+# dart:io      = HTTP server, process, file
+# dart:convert = JSON encode/decode
+# dart:isolate = concurrency (ถ้าต้องการ)
+dependencies: {}
+
+dev_dependencies: {}

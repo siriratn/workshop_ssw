@@ -1,0 +1,21 @@
+services:
+  php-web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: php-web-app
+    ports:
+      - "8087:8080"
+    volumes:
+      - ./data:/app/data   # mount folder data ไว้บน host → เห็น php_events.json ได้
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: rust-web-app_default
+    external: true
