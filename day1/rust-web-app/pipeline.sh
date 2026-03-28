@@ -172,6 +172,8 @@ stage_deploy() {
     -e HOST=0.0.0.0 \
     -e PORT=8080 \
     -e RUST_LOG=info \
+    -v "$(pwd)/.env:/app/.env:ro" \
+    --env-file .env \
     --restart unless-stopped \
     "${IMAGE_NAME}:latest"
 
