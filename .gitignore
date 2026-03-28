@@ -5,3 +5,5 @@ day1/README_NN.md
 /day1/go-web-app-3
 day1/.DS_Store
 day1/rust-web-app/src/main.txt
+/day1/rust-web-app/target
+day1/rust-web-app/Dockerfile copy

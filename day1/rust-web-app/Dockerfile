@@ -1,50 +1,68 @@
 # ============================================================
 #  Dockerfile — Multi-stage build for Rust Web App
+#  Stage 0 : Dev (สำหรับ lint / test เท่านั้น)
 #  Stage 1 : Builder  (compile source → binary)
 #  Stage 2 : Runtime  (minimal OS image + binary only)
 # ============================================================
+# ============================================================
+#  Multi-stage Dockerfile (dev / builder / runtime)
+# ============================================================
 
-# ── Stage 1: Builder ─────────────────────────────────────────
-FROM rust:latest AS builder
+# ── Stage 0: Dev (สำหรับ lint / test เท่านั้น) ──────────────
+FROM rust:latest AS dev
 
-# Set working directory
 WORKDIR /app
 
-# Install build dependencies
+# install dev tools (lint + format)
+RUN rustup component add rustfmt clippy
+
+# (optional) install system deps เผื่อ test ต้องใช้
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all project files
+# copy source
 COPY Cargo.toml ./
 COPY src ./src
 
-# Build the release binary
+# ── Stage 1: Builder (compile only) ─────────────────────────
+FROM rust:latest AS builder
+
+WORKDIR /app
+
+# install build deps เท่านั้น (lean กว่า dev)
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# copy source
+COPY Cargo.toml ./
+COPY src ./src
+
+# build release binary
 RUN cargo build --release
 
-# ── Stage 2: Runtime ─────────────────────────────────────────
-# Use a minimal Debian image — no Rust toolchain needed
+# ── Stage 2: Runtime (minimal) ──────────────────────────────
 FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
-# Install only the runtime libraries needed (libssl)
+# install runtime deps เท่านั้น
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy compiled binary from builder stage
+# copy binary จาก builder
 COPY --from=builder /app/target/release/rust-web-app ./rust-web-app
 
-# Environment variables
+# env
 ENV HOST=0.0.0.0
 ENV PORT=8080
 ENV RUST_LOG=info
 
-# Expose the application port
 EXPOSE 8080
 
-# App Runtime entry-point (OS Executable)
 CMD ["./rust-web-app"]

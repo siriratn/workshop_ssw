@@ -1,5 +1,5 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder};
 use actix_web::middleware::Logger;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -56,7 +56,7 @@ fn now_secs() -> u64 {
 fn read_env_file() -> HashMap<String, String> {
     match from_filename_iter(".env") {
         Ok(iter) => iter
-            .filter_map(|item| item.ok())   // ข้าม line ที่ parse ไม่ได้
+            .filter_map(|item| item.ok()) // ข้าม line ที่ parse ไม่ได้
             .collect(),
         Err(_) => {
             warn!("Could not read .env file — returning empty config");
@@ -70,7 +70,7 @@ fn read_env_file() -> HashMap<String, String> {
 // ไม่มี lifetime, ไม่มี Arc, ไม่มี Mutex — อ่านแล้วทิ้ง
 #[derive(Serialize)]
 struct ConfigSnapshot {
-    database_url:   String,
+    database_url: String,
     redis_endpoint: String,
 }
 
@@ -98,7 +98,7 @@ impl ConfigSnapshot {
 #[derive(Serialize)]
 struct IndexData {
     status: &'static str,
-    config: ConfigSnapshot,   // <── field ใหม่ที่โจทย์ต้องการ
+    config: ConfigSnapshot, // <── field ใหม่ที่โจทย์ต้องการ
 }
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async fn index() -> impl Responder {
 
     let data = IndexData {
         status: "healthy",
-        config: ConfigSnapshot::from_env_file(),  // อ่านสดทุกครั้ง
+        config: ConfigSnapshot::from_env_file(), // อ่านสดทุกครั้ง
     };
 
     HttpResponse::Ok().json(ApiResponse::ok(
@@ -174,7 +174,7 @@ async fn get_event(state: web::Data<AppState>, path: web::Path<String>) -> impl 
     let events = state.events.lock().unwrap();
     match events.iter().find(|e| e.id == id) {
         Some(e) => HttpResponse::Ok().json(ApiResponse::ok("Found", e.clone())),
-        None    => HttpResponse::NotFound().json(err_response("not found")),
+        None => HttpResponse::NotFound().json(err_response("not found")),
     }
 }
 
@@ -210,15 +210,17 @@ async fn main() -> std::io::Result<()> {
     );
     info!("Listening on http://{}", addr);
 
-    let state = web::Data::new(AppState { events: Mutex::new(Vec::new()) });
+    let state = web::Data::new(AppState {
+        events: Mutex::new(Vec::new()),
+    });
 
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
             .wrap(Logger::default())
-            .route("/",            web::get().to(index))
-            .route("/events",      web::get().to(list_events))
-            .route("/events",      web::post().to(create_event))
+            .route("/", web::get().to(index))
+            .route("/events", web::get().to(list_events))
+            .route("/events", web::post().to(create_event))
             .route("/events/{id}", web::get().to(get_event))
             .route("/events/{id}", web::delete().to(delete_event))
     })
