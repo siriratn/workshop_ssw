@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// ─── 1. เพิ่ม dotenvy เพื่ออ่าน .env ───────────────────────────────────────
+// dotenvy::from_filename_iter() อ่านไฟล์แล้วคืน Iterator ของ (key, value)
+// โดยไม่ set environment variable ลงใน process — เหมาะสำหรับ hot-reload
+// เพราะถ้าใช้ dotenvy::dotenv() มันจะ set เข้า process env ซึ่ง immutable
+use dotenvy::from_filename_iter;
+use std::collections::HashMap;
+
+// ─── Shared structs ─────────────────────────────────────────────────────────
+
 #[derive(Serialize)]
 struct ApiResponse<T: Serialize> {
     success: bool,
@@ -40,6 +49,80 @@ fn now_secs() -> u64 {
         .as_secs()
 }
 
+// ─── 2. ฟังก์ชัน read_env_file() ────────────────────────────────────────────
+// อ่าน .env ทุกครั้งที่เรียก — ไม่ cache ไม่เก็บ state
+// คืน HashMap<String, String> ของทุก key ในไฟล์
+// ถ้าไฟล์ไม่มีหรืออ่านไม่ได้ คืน empty map (ไม่ panic)
+fn read_env_file() -> HashMap<String, String> {
+    match from_filename_iter(".env") {
+        Ok(iter) => iter
+            .filter_map(|item| item.ok())   // ข้าม line ที่ parse ไม่ได้
+            .collect(),
+        Err(_) => {
+            warn!("Could not read .env file — returning empty config");
+            HashMap::new()
+        }
+    }
+}
+
+// ─── 3. ConfigSnapshot — struct สำหรับ serialize เฉพาะ field ที่ต้องการ ─────
+// สร้างใหม่ทุก request จาก read_env_file()
+// ไม่มี lifetime, ไม่มี Arc, ไม่มี Mutex — อ่านแล้วทิ้ง
+#[derive(Serialize)]
+struct ConfigSnapshot {
+    database_url:   String,
+    redis_endpoint: String,
+}
+
+impl ConfigSnapshot {
+    fn from_env_file() -> Self {
+        let map = read_env_file();
+        Self {
+            // ถ้า key ไม่มีใน .env ให้ใช้ fallback จาก process env
+            // แล้วค่อย fallback เป็น string ว่าง
+            database_url: map
+                .get("DATABASE_URI")
+                .cloned()
+                .or_else(|| std::env::var("DATABASE_URI").ok())
+                .unwrap_or_default(),
+            redis_endpoint: map
+                .get("REDIS_ENDPOINT")
+                .cloned()
+                .or_else(|| std::env::var("REDIS_ENDPOINT").ok())
+                .unwrap_or_default(),
+        }
+    }
+}
+
+// ─── 4. Response body สำหรับ GET / ──────────────────────────────────────────
+#[derive(Serialize)]
+struct IndexData {
+    status: &'static str,
+    config: ConfigSnapshot,   // <── field ใหม่ที่โจทย์ต้องการ
+}
+
+// ─── Handlers ───────────────────────────────────────────────────────────────
+
+// ─── 5. index() อ่าน config ใหม่ทุก request ─────────────────────────────────
+// ไม่มีการแตะ AppState เพื่อดึง config เลย
+// ทุกครั้งที่ client GET / → read_env_file() ถูกเรียก → อ่านจากดิสก์ใหม่
+// หาก ops แก้ DATABASE_URI ใน .env แล้ว call ใหม่ → เห็นค่าใหม่ทันที
+async fn index() -> impl Responder {
+    info!("GET /");
+
+    let data = IndexData {
+        status: "healthy",
+        config: ConfigSnapshot::from_env_file(),  // อ่านสดทุกครั้ง
+    };
+
+    HttpResponse::Ok().json(ApiResponse::ok(
+        "Rust Event-Driven Web App is running!",
+        data,
+    ))
+}
+
+// ─── Event structs & handlers (ไม่เปลี่ยน) ──────────────────────────────────
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Event {
     id: String,
@@ -56,14 +139,6 @@ struct CreateEventRequest {
 
 struct AppState {
     events: Mutex<Vec<Event>>,
-}
-
-async fn index() -> impl Responder {
-    info!("GET /");
-    HttpResponse::Ok().json(ApiResponse::ok(
-        "Rust Event-Driven Web App is running!",
-        serde_json::json!({ "status": "healthy" }),
-    ))
 }
 
 async fn list_events(state: web::Data<AppState>) -> impl Responder {
@@ -99,7 +174,7 @@ async fn get_event(state: web::Data<AppState>, path: web::Path<String>) -> impl 
     let events = state.events.lock().unwrap();
     match events.iter().find(|e| e.id == id) {
         Some(e) => HttpResponse::Ok().json(ApiResponse::ok("Found", e.clone())),
-        None => HttpResponse::NotFound().json(err_response("not found")),
+        None    => HttpResponse::NotFound().json(err_response("not found")),
     }
 }
 
@@ -115,16 +190,28 @@ async fn delete_event(state: web::Data<AppState>, path: web::Path<String>) -> im
     }
 }
 
+// ─── main ────────────────────────────────────────────────────────────────────
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // ─── 6. ตอน startup โหลด .env เข้า process env ────────────────────────
+    // dotenvy::dotenv() ใช้แค่ตอน start เพื่อ populate HOST, PORT, RUST_LOG
+    // ซึ่งเป็น infra config ที่ไม่ต้อง hot-reload
+    // DATABASE_URI / REDIS_ENDPOINT จะไม่ถูกใช้ผ่าน std::env ใน index()
+    // แต่จะอ่านตรงจากไฟล์เสมอ
+    let _ = dotenvy::dotenv();
+
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+
     let addr = format!(
         "{}:{}",
         std::env::var("HOST").unwrap_or("0.0.0.0".into()),
         std::env::var("PORT").unwrap_or("8080".into())
     );
     info!("Listening on http://{}", addr);
+
     let state = web::Data::new(AppState { events: Mutex::new(Vec::new()) });
+
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
