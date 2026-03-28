@@ -1,11 +1,7 @@
 
 
 $ docker build -t rust-web-app:1.0 .
-
-docker run -d -p 8080:8080 rust-web-app:1.0
-# docker run -v $(pwd)/.env:/app/.env rust-web-app:1.0
-
-docker run -dt --name=rust-web -d -p 8080:8080 -v $(pwd)/.env:/app/.env rust-web-app:1.0
+$ docker run -dt --name=rust-web -d -p 8080:8080 -v $(pwd)/.env:/app/.env rust-web-app:1.0
 
 
 # Component ตามโจทย์
