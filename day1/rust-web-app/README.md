@@ -21,6 +21,18 @@ chmod +x pipeline.sh
 ./pipeline.sh
 
 ```
+
+###### ====================================================
+cargo fmt --check
+ืnoted ถ้า format code ยังไม่ตรงมาตรฐาน rustfmt
+cargo fmt
+หรือ
+docker run --rm \
+  -v "$(pwd)":/app \
+  -w /app \
+  rust-dev \
+  cargo fmt
+
 ## ====================================================
 
 ## เปลี่ยน port
