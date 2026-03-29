@@ -1,3 +1,28 @@
+## วิธีเรียกใช้ pipeline.sh
+``` 
+chmod +x pipeline.sh
+
+
+## STAGE 1 — LINT  
+./pipeline.sh lint
+
+# STAGE 2 — TEST   
+./pipeline.sh test
+
+# STAGE 3 — BUILD  (docker build image)
+./pipeline.sh build
+
+# STAGE 4 — DEPLOY  (docker run container)
+./pipeline.sh deploy
+
+
+
+```
+###### ====================================================
+
+
+
+
 # Python 3 Web App
 Component Overview
 
