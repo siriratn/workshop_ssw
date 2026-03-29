@@ -34,6 +34,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o go-web-app .
 # binary Go แบบ static ไม่ต้องการ OS libraries จึงรันบน scratch ได้
 FROM scratch AS runtime
 
+WORKDIR /app
+
 # Copy CA certs จาก builder (สำหรับ HTTPS)
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
