@@ -1,33 +1,42 @@
-# ============================================================
-#  Dockerfile — PHP Web App
-#  ใช้ PHP built-in web server (-S) เพื่อไม่ต้องมี Apache/Nginx
-# ============================================================
+# ── Stage 1: builder ─────────────────────────
+FROM composer:2 AS builder
 
+WORKDIR /app
+
+# copy เฉพาะ composer.json ก่อน
+COPY composer.json ./
+
+# ถ้ามี composer.lock ค่อย copy
+COPY composer.lock* ./
+
+# install dependencies (รองรับกรณีไม่มี lock)
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --prefer-dist \
+    || true \
+ && mkdir -p /app/vendor
+
+# ── Stage 2: runtime ─────────────────────────
 FROM php:8.2-cli-alpine
 
 WORKDIR /app
 
-# ติดตั้ง composer (Package Manager)
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# copy vendor (ถ้ามี)
+COPY --from=builder /app/vendor ./vendor
 
-# Copy Dependency File
-COPY composer.json ./
-
-# composer install — กรณีนี้ไม่มี external dep
-RUN composer install --no-dev --optimize-autoloader --no-interaction 2>/dev/null || true
-
-# Copy Source Code
+# copy source code
 COPY index.php ./
 
-# สร้าง folder สำหรับเก็บ php_events.json และ php_counter.txt
-RUN mkdir -p /app/data && chmod 777 /app/data
+# create data dir
+RUN mkdir -p /app/data \
+    && chmod 777 /app/data
 
+# env (infra)
 ENV HOST=0.0.0.0
 ENV PORT=8080
 
 EXPOSE 8080
 
-# App Runtime = php binary
-# -S = built-in web server (event-driven per request)
-# index.php = router script (OS Executable)
 CMD ["sh", "-c", "php -S ${HOST}:${PORT} index.php"]

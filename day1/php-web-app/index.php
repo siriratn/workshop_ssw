@@ -16,6 +16,27 @@ declare(strict_types=1);
 // ============================================================
 //  Helpers
 // ============================================================
+function readEnvFile(string $path = '.env'): array
+{
+    if (!file_exists($path)) return [];
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $env = [];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+
+        if ($line === '' || str_starts_with($line, '#')) continue;
+
+        [$key, $val] = array_pad(explode('=', $line, 2), 2, '');
+
+        $val = trim($val, "\"' "); // strip quotes
+        $env[$key] = $val;
+    }
+
+    return $env;
+}
+
 
 function nowTs(): int
 {
@@ -149,6 +170,10 @@ function storeDeleteById(string $id): ?array
 
 storeInit();
 
+if (php_sapi_name() === 'cli') {
+    return; // <<< สำคัญ
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -156,10 +181,18 @@ logMsg('INFO', "$method $path");
 
 // ── GET / ─────────────────────────────────────────────────
 if ($method === 'GET' && $path === '/') {
+
+    $env = readEnvFile(__DIR__ . '/.env');
+
+    logMsg('DEBUG', json_encode($env));
+    
     sendJson(200, apiOk('PHP Event-Driven Web App is running!', [
         'status'  => 'healthy',
         'version' => '1.0.0',
         'lang'    => 'php',
+         // hot-reload config
+        'database' => $env['DATABASE_URI'] ?? null,
+        'redis'    => $env['REDIS_ENDPOINT'] ?? null,
     ]));
 }
 

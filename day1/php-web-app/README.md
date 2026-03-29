@@ -1,3 +1,31 @@
+
+## วิธีเรียกใช้ pipeline.sh
+``` 
+chmod +x pipeline.sh
+
+
+## STAGE 1 — LINT  
+./pipeline.sh lint
+
+# STAGE 2 — TEST   
+./pipeline.sh test
+
+# STAGE 3 — BUILD  (docker build image)
+./pipeline.sh build
+
+# STAGE 4 — DEPLOY  (docker run container)
+./pipeline.sh deploy
+
+# รันทั้งหมด
+./pipeline.sh
+
+```
+###### ====================================================
+
+
+
+
+
 | Component               | สิ่งที่ใช้                        | รายละเอียด                                                                                                                      |
 | ----------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Source Code**         | `index.php`                       | ใช้ฟังก์ชันพื้นฐานของ PHP เช่น `$_SERVER`, `file_get_contents`, `json_encode`, `json_decode` สำหรับจัดการ HTTP request/response |
