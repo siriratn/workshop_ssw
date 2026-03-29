@@ -19,8 +19,7 @@ TAG="${TAG:-$(git rev-parse --short HEAD 2>/dev/null || echo latest)}"
 REGISTRY="${REGISTRY:-}"             # เช่น ghcr.io/myuser — ถ้าว่างจะ build local เท่านั้น
 CONTAINER_NAME="${CONTAINER_NAME:-rust-web-app}"
 HOST_PORT="${HOST_PORT:-8080}"       # port บน host machine
-# RUST_IMAGE="rust:latest"             # image ที่ใช้รัน lint/test
-RUST_IMAGE="rust-dev"             # image ที่ใช้รัน lint/test
+RUST_IMAGE="rust-dev"               # image ที่ใช้รัน lint/test
 
 # ─── Helpers ────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'
@@ -31,13 +30,34 @@ ok()   { echo -e "${GREEN}  ✔ $*${NC}"; }
 warn() { echo -e "${YELLOW}  ⚠ $*${NC}"; }
 die()  { echo -e "${RED}  ✘ $*${NC}"; exit 1; }
 
+# ─── resolve_image() ─────────────────────────────────────────
+# ฟังก์ชันกลางสำหรับสร้างชื่อ image — ใช้ร่วมกันระหว่าง
+# stage_build และ stage_deploy เพื่อให้ชี้ image เดียวกันเสมอ
+#
+# ผลลัพธ์ (set เป็น global variable):
+#   FULL_IMAGE    = <registry>/<name>:<TAG>  หรือ  <name>:<TAG>
+#   LATEST_IMAGE  = <registry>/<name>:latest หรือ  <name>:latest
+#
+# ตัวอย่าง:
+#   TAG=v1.0.0                → FULL_IMAGE=rust-web-app:v1.0.0
+#   TAG=v1.0.0 REGISTRY=ghcr.io/user → FULL_IMAGE=ghcr.io/user/rust-web-app:v1.0.0
+#   (ไม่ระบุ TAG)             → FULL_IMAGE=rust-web-app:<git-sha>
+#   TAG=latest                → FULL_IMAGE=rust-web-app:latest
+resolve_image() {
+  if [[ -n "$REGISTRY" ]]; then
+    FULL_IMAGE="${REGISTRY}/${IMAGE_NAME}:${TAG}"
+    LATEST_IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
+  else
+    FULL_IMAGE="${IMAGE_NAME}:${TAG}"
+    LATEST_IMAGE="${IMAGE_NAME}:latest"
+  fi
+}
 
 # ─── ตรวจว่ามี Docker ───────────────────────────────────────
 check_docker() {
   command -v docker &>/dev/null || die "ไม่พบ Docker — ติดตั้งที่ https://docs.docker.com/get-docker/"
   docker info &>/dev/null       || die "Docker daemon ไม่ทำงาน — กรุณาเปิด Docker Desktop"
 }
-
 
 ensure_dev_image() {
   if ! docker image inspect "$RUST_IMAGE" &>/dev/null; then
@@ -49,7 +69,6 @@ ensure_dev_image() {
   fi
 }
 
-
 # ============================================================
 #  STAGE 1 — LINT
 #  cargo fmt  = ตรวจ code format      (เทียบ gofmt ของ Go)
@@ -58,9 +77,9 @@ ensure_dev_image() {
 # ============================================================
 stage_lint() {
   log "STAGE 1/4 — LINT (cargo fmt + cargo clippy)"
-  
-  ensure_dev_image   # เพิ่มตรงนี้
-  
+
+  ensure_dev_image
+
   docker run --rm \
     -v "$(pwd)":/app \
     -w /app \
@@ -85,8 +104,8 @@ stage_lint() {
 # ============================================================
 stage_test() {
   log "STAGE 2/4 — TEST (cargo test)"
- 
-  ensure_dev_image   #  ใช้ตัวเดียวกัน
+
+  ensure_dev_image
 
   docker run --rm \
     -v "$(pwd)":/app \
@@ -110,18 +129,14 @@ stage_test() {
 stage_build() {
   log "STAGE 3/4 — BUILD IMAGE (docker build)"
 
-  # กำหนด full image name
-  if [[ -n "$REGISTRY" ]]; then
-    FULL_IMAGE="${REGISTRY}/${IMAGE_NAME}:${TAG}"
-    LATEST_IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
-  else
-    FULL_IMAGE="${IMAGE_NAME}:${TAG}"
-    LATEST_IMAGE="${IMAGE_NAME}:latest"
-  fi
+  # resolve ชื่อ image ผ่าน function กลาง
+  resolve_image
 
   log "  Image : $FULL_IMAGE"
 
-  # build และ tag สองชื่อพร้อมกัน
+  # build และ tag สองชื่อพร้อมกัน:
+  #   <image>:<TAG>    เช่น rust-web-app:v1.0.0  (version เฉพาะ)
+  #   <image>:latest   ชี้ไปที่ build ล่าสุดเสมอ
   docker build \
     -t "$FULL_IMAGE" \
     -t "$LATEST_IMAGE" \
@@ -149,23 +164,40 @@ stage_build() {
 
 # ============================================================
 #  STAGE 4 — DEPLOY
-#  หยุด container เก่า แล้วรัน container ใหม่จาก image ที่ build
-#  เทียบกับ: ./target/release/rust-web-app
+#  หยุด container เก่า แล้วรัน container ใหม่จาก image ที่ระบุ
+#
+#  TAG resolution (ใช้ resolve_image() เดียวกับ stage_build):
+#
+#    คำสั่ง                           image ที่รัน
+#    TAG=v1.0.0 ./pipeline.sh deploy  rust-web-app:v1.0.0
+#    TAG=v0.9.0 ./pipeline.sh deploy  rust-web-app:v0.9.0  ← rollback
+#    TAG=latest ./pipeline.sh deploy  rust-web-app:latest
+#    ./pipeline.sh deploy             rust-web-app:<git-sha>
 # ============================================================
 stage_deploy() {
   log "STAGE 4/4 — DEPLOY (docker run)"
 
-  # หยุดและลบ container เก่าถ้ามี (ไม่ error ถ้าไม่มี)
+  # resolve_image() ใช้ตัวแปร TAG เดียวกับ stage_build
+  # ทำให้ TAG=v1.0.0 ./pipeline.sh deploy
+  # ชี้ไปที่ image เดียวกับที่ TAG=v1.0.0 ./pipeline.sh build สร้างไว้
+  resolve_image
+  log "  Image : $FULL_IMAGE"
+
+  # ตรวจว่า image มีอยู่จริงก่อน deploy
+  # ป้องกันการรัน image ที่ยังไม่ได้ build หรือพิมพ์ tag ผิด
+  if ! docker image inspect "$FULL_IMAGE" &>/dev/null; then
+    die "ไม่พบ image '${FULL_IMAGE}'\nรัน build ก่อน: TAG=${TAG} ./pipeline.sh build"
+  fi
+
+  # หยุดและลบ container เก่าถ้ามี
   if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     log "  หยุด container เก่า: $CONTAINER_NAME"
     docker rm -f "$CONTAINER_NAME"
   fi
 
-  # ตรวจว่า image มีอยู่
-  docker image inspect "${IMAGE_NAME}:latest" &>/dev/null \
-    || die "ไม่พบ image '${IMAGE_NAME}:latest' — กรุณารัน: ./pipeline.sh build ก่อน"
-
   # รัน container ใหม่
+  # -v .env:/app/.env:ro  = hot-reload config (อ่านไฟล์ใหม่ทุก GET /)
+  # --env-file .env       = โหลด HOST, PORT, RUST_LOG เข้า process env ตอน start
   docker run -d \
     --name "$CONTAINER_NAME" \
     -p "${HOST_PORT}:8080" \
@@ -175,10 +207,11 @@ stage_deploy() {
     -v "$(pwd)/.env:/app/.env:ro" \
     --env-file .env \
     --restart unless-stopped \
-    "${IMAGE_NAME}:latest"
+    "$FULL_IMAGE"
 
   ok "DEPLOY SUCCESS"
   log "  Container : $CONTAINER_NAME"
+  log "  Image     : $FULL_IMAGE"
   log "  URL       : http://localhost:${HOST_PORT}"
   log ""
   log "  ดู logs   : docker logs -f $CONTAINER_NAME"
@@ -192,27 +225,27 @@ usage() {
   echo ""
   echo -e "${CYAN}วิธีใช้: ./pipeline.sh [stage]${NC}"
   echo ""
-  echo "  lint     cargo fmt + clippy       ← cargo check"
-  echo "  test     cargo test               ← cargo test"
-  echo "  build    docker build image       ← cargo build --release"
-  echo "  deploy   docker run container     ← ./target/release/rust"
+  echo "  lint     cargo fmt + clippy"
+  echo "  test     cargo test"
+  echo "  build    docker build image"
+  echo "  deploy   docker run container"
   echo "  all      ทุก stage (default)"
   echo ""
   echo "Environment variables:"
   echo "  IMAGE_NAME=rust-web-app   ชื่อ Docker image"
-  echo "  TAG=abc1234               image tag (default: git short SHA)"
+  echo "  TAG=v1.0.0                image tag (default: git short SHA)"
   echo "  REGISTRY=ghcr.io/user     push ไป registry (optional)"
   echo "  HOST_PORT=8080            port บน host machine"
   echo "  CONTAINER_NAME=rust-web-app"
   echo ""
   echo "ตัวอย่าง:"
-  echo "  ./pipeline.sh                          # รันทุก stage"
-  echo "  ./pipeline.sh lint                     # เฉพาะ lint"
-  echo "  ./pipeline.sh test                     # เฉพาะ test"
-  echo "  ./pipeline.sh build                    # เฉพาะ build image"
-  echo "  ./pipeline.sh deploy                   # เฉพาะ deploy"
-  echo "  HOST_PORT=9090 ./pipeline.sh deploy    # deploy บน port 9090"
-  echo "  REGISTRY=ghcr.io/user ./pipeline.sh build  # build + push"
+  echo "  ./pipeline.sh                                        # รันทุก stage (tag=git SHA)"
+  echo "  TAG=v1.0.0 ./pipeline.sh build                      # build image:v1.0.0"
+  echo "  TAG=v1.0.0 ./pipeline.sh deploy                     # deploy image:v1.0.0"
+  echo "  TAG=v0.9.0 ./pipeline.sh deploy                     # rollback ไป v0.9.0"
+  echo "  TAG=latest ./pipeline.sh deploy                     # deploy image:latest"
+  echo "  REGISTRY=ghcr.io/user TAG=v1.0.0 ./pipeline.sh build  # build + push"
+  echo "  HOST_PORT=9090 ./pipeline.sh deploy                 # deploy บน port 9090"
   echo ""
 }
 
@@ -246,6 +279,3 @@ main() {
 }
 
 main "$@"
-
-
-
