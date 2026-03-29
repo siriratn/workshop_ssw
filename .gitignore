@@ -7,3 +7,4 @@ day1/.DS_Store
 day1/rust-web-app/src/main.txt
 /day1/rust-web-app/target
 day1/rust-web-app/Dockerfile copy
+day1/rust-web-app/pipeline copy.sh
