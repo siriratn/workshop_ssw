@@ -1,30 +1,27 @@
 # ============================================================
 #  Dockerfile — Multi-stage build สำหรับ Dart Web App
-#  Stage 1 : Builder  — dart compile exe → native binary
-#  Stage 2 : Runtime  — debian-slim + binary เท่านั้น
+#
+#  Stage dev     : dart SDK สำหรับ lint/test (pipeline.sh ใช้)
+#  Stage builder : dart compile exe → native binary
+#  Stage runtime : debian-slim + binary + .env mount เท่านั้น
 # ============================================================
 
-# ── Stage 1: Builder ─────────────────────────────────────────
-FROM dart:stable AS builder
+# ── Stage: dev (ใช้โดย pipeline.sh สำหรับ lint และ test) ────
+FROM dart:stable AS dev
 
 WORKDIR /app
-
-# Copy Dependency File ก่อน
 COPY pubspec.yaml ./
-
-# Package Manager: pub — download dependencies
-# กรณีนี้ไม่มี external dep แต่ยังต้อง run เพื่อสร้าง .dart_tool/
 RUN dart pub get
+COPY . .
 
-# Copy Source Code
-COPY main.dart ./
+# ── Stage: builder — compile เป็น native binary ──────────────
+FROM dev AS builder
 
-# Compile เป็น native binary (AOT compilation)
-# dart compile exe = Ahead-of-Time compile → standalone binary
+# dart compile exe = AOT compile → standalone binary
 # ไม่ต้องการ Dart SDK ตอนรัน
 RUN dart compile exe main.dart -o app
 
-# ── Stage 2: Runtime ─────────────────────────────────────────
+# ── Stage: runtime — minimal image + binary only ─────────────
 FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
@@ -36,10 +33,12 @@ RUN apt-get update && apt-get install -y \
 # Copy compiled binary (OS Executable)
 COPY --from=builder /app/app ./app
 
+# .env จะถูก mount เข้ามาตอน docker run ผ่าน -v
+# ถ้าไม่ mount จะใช้ค่าจาก ENV ที่ set ไว้
 ENV HOST=0.0.0.0
 ENV PORT=8080
+ENV ENV_FILE=/app/.env
 
 EXPOSE 8080
 
-# App Runtime entry-point — binary รันได้เลยโดยไม่ต้องการ Dart SDK
 CMD ["./app"]

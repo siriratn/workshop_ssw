@@ -1,0 +1,14 @@
+{
+  "roots": [
+    "dart_web_app"
+  ],
+  "packages": [
+    {
+      "name": "dart_web_app",
+      "version": "1.0.0",
+      "dependencies": [],
+      "devDependencies": []
+    }
+  ],
+  "configVersion": 1
+}
