@@ -18,7 +18,7 @@ IMAGE_NAME="${IMAGE_NAME:-dart-web-app}"
 TAG="${TAG:-$(git rev-parse --short HEAD 2>/dev/null || echo latest)}"
 REGISTRY="${REGISTRY:-}"
 CONTAINER_NAME="${CONTAINER_NAME:-dart-web-app}"
-HOST_PORT="${HOST_PORT:-8085}"
+HOST_PORT="${HOST_PORT:-8080}"
 DART_IMAGE="dart-dev"          # dev image สำหรับ lint/test
 
 # ─── Helpers ────────────────────────────────────────────────
