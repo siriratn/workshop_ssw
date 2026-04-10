@@ -1,3 +1,20 @@
+
+
+```
+cd csharp-web-app
+chmod +x pipeline.sh
+
+./pipeline.sh           # รันทุก stage
+./pipeline.sh lint      # เฉพาะ lint
+./pipeline.sh test      # เฉพาะ test
+./pipeline.sh build     # build image
+./pipeline.sh deploy    # deploy
+
+```
+
+
+
+
 # C# Web App (.NET 8 Minimal API)
 Component Overview
 
