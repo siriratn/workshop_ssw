@@ -87,17 +87,17 @@ class EnvConfig {
 typedef EventMap = Map<String, dynamic>;
 
 Map<String, dynamic> apiOk(String message, dynamic data) => {
-  'success': true,
-  'message': message,
-  'data': data,
-  'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-};
+      'success': true,
+      'message': message,
+      'data': data,
+      'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    };
 
 Map<String, dynamic> apiErr(String message) => {
-  'success': false,
-  'message': message,
-  'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-};
+      'success': false,
+      'message': message,
+      'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    };
 
 // ============================================================
 //  In-memory Store
