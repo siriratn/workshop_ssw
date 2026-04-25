@@ -37,7 +37,7 @@ kubectl expose deploy nginx \
 cat nginx-svc.yaml
 
 ## Apply ทั้งหมด
-
+```        
 ### apply ทีละไฟล์
 kubectl apply -f nginx-cm.yaml
 kubectl apply -f nginx-deploy.yaml
@@ -54,7 +54,7 @@ kubectl port-forward svc/nginx 3000:3000
 
 # หรือ port-forward ตรงไปที่ Pod
 kubectl port-forward pod/<pod-name> 3000:80
-
+```
 
  ### ***เมื่อแก้ index.html และ apply ConfigMap ใหม่
  ```
