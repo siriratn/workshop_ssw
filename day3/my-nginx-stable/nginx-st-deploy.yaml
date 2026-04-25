@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%           # Pod เพิ่มได้สูงสุด 125% ระหว่าง update
+      maxUnavailable: 25%     # Pod ดับได้สูงสุด 25% ระหว่าง updatestrategy: {}
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx:1.27-alpine
+        name: nginx
+        resources: {}
+status: {}

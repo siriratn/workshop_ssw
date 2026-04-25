@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  index.html: |
+    <h1>Hello nid noi 123</h1>
+kind: ConfigMap
+metadata:
+  name: nginx-cm
