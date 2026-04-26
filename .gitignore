@@ -12,3 +12,4 @@ day1/rust-web-app/pipeline copy.sh
 day1/python-web-app/mnt/user-data/outputs/python-web-app/Dockerfile_t
 /day3/misc
 day3/README_NN.md
+/day3/home-work/deployment/my-nginx/doc
