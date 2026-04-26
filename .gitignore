@@ -14,3 +14,4 @@ day1/python-web-app/mnt/user-data/outputs/python-web-app/Dockerfile_t
 day3/README_NN.md
 /day3/home-work/deployment/my-nginx/doc
 day3/home-work/deployment/my-nginx-stable/__nginx-st-deploy.yaml
+day3/home-work/deployment/nginx-config-map/nginx-deploy copy.yaml

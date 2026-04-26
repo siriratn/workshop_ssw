@@ -24,7 +24,36 @@ kubectl create deploy nginx \
   ```
 
 ### แก้ไข nginx-deploy.yaml เพิ่ม volumeMounts + volumes  
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        resources: {}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/nginx/html
 
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-cm
+```
 ##  สร้าง Service YAML via Imperative Command
 ```
 kubectl expose deploy nginx \
@@ -54,6 +83,11 @@ kubectl port-forward svc/nginx 3000:3000
 
 # หรือ port-forward ตรงไปที่ Pod
 kubectl port-forward pod/<pod-name> 3000:80
+```
+
+### ตรวจสอบหลัง apply
+```
+kubectl get cm,deploy,pod,svc
 ```
 
  ### ***เมื่อแก้ index.html และ apply ConfigMap ใหม่
