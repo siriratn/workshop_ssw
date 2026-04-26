@@ -2,9 +2,9 @@
 # Deployment image nginx 
 ##  สร้าง Declarative YAML via Imperative Command
 ```
-kubectl create deploy nginx \
+kubectl create deploy nginx-deploy \
   --image=nginx:1.25-alpine \
-  --replicas=12 \
+  --replicas=2 \
   --dry-run=client -o yaml > nginx-deploy.yaml
 
 ```
@@ -19,8 +19,8 @@ kubectl rollout history deploy nginx
 
 
 ## Update Deploy version ใหม่ nginx:1.27-alpine
-kubectl set image deploy nginx nginx=nginx:1.27-alpine
-
+kubectl set image deploy nginx-deploy nginx=nginx:1.27-alpine
+kubectl scale deploy nginx-deploy --replicas=12
 
 ## ดู rollout progress
 kubectl rollout status deploy nginx -w

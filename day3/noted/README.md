@@ -75,7 +75,7 @@ Pod standalone
 ❌ scale ไม่ได้
 
 ## Deployment
-kubectl scale deploy nginx-deploy --replicas=5
+kubectl scale deploy nginx --replicas=5
 
 ได้ 5 pods ทันที
 
