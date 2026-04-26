@@ -1,34 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
   labels:
-    app.kubernetes.io/name: nginx
-    app.kubernetes.io/component: frontend
+    app: nginx
+  name: nginx
 spec:
-  replicas: 12
+  replicas: 2
   selector:
     matchLabels:
       app: nginx
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 15%           # Pod เพิ่มได้สูงสุด 15% ระหว่าง update
-      maxUnavailable: 24%     # Pod ดับได้สูงสุด 24% ระหว่าง update
+      maxSurge: 25%           # Pod เพิ่มได้สูงสุด 125% ระหว่าง update
+      maxUnavailable: 25%     # Pod ดับได้สูงสุด 25% ระหว่าง updatestrategy: {}
   template:
     metadata:
       labels:
         app: nginx
     spec:
       containers:
-      - name: nginx
-        image: nginx:1.25-alpine    # v1 เริ่มต้น
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "100m"
-            memory: "128Mi"
+      - image: nginx:1.27-alpine
+        name: nginx
+        resources: {}
+status: {}

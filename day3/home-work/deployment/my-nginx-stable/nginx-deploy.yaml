@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-deploy-stable
+  name: nginx-deploy-stable
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-deploy-stable
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: nginx-deploy-stable
+    spec:
+      containers:
+      - image: nginx:1.27-alpine
+        name: nginx
+        resources: {}
+status: {}
