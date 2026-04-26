@@ -3,7 +3,7 @@
 
 ```
 
-docker build -t busybox-app:v1.0.0 .
+docker build -t busybox-app:1.0.0 .
 
 ```
 
@@ -12,10 +12,12 @@ docker images | grep jumpbox-app
 
 ## Imperative Command → Declarative YAML
 ```
-kubectl run busybox-app \        
-  --image=busybox-app:v1.0.0 \
+kubectl run busybox-app --image=busybox-app:1.0.0 --port=80 --dry-run=client -o yaml > busybox-app-pod.yaml
+
+<!-- kubectl run busybox-app \        
+  --image=busybox-app:1.0.0 \
   --port=80 \
-  --dry-run=client -o yaml > busybox-app-pod.yaml
+  --dry-run=client -o yaml > busybox-app-pod.yaml -->
 
 ```
 

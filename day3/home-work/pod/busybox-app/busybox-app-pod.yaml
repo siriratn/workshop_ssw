@@ -6,7 +6,7 @@ metadata:
   name: busybox-app
 spec:
   containers:
-  - image: busybox-app:v1.0.0
+  - image: busybox-app:1.0.0
     name: busybox-app
     ports:
     - containerPort: 80

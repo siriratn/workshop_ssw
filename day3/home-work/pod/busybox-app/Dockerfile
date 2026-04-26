@@ -3,4 +3,4 @@ WORKDIR /app
 COPY . .
 EXPOSE 80 
 ENTRYPOINT [ "sh","-c" ]
-CMD [ "echo Hello World && sleep 3600" ]
+CMD [ "echo Hello Beatiful World && sleep 3600" ]
